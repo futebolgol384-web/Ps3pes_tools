@@ -22,7 +22,7 @@ LIBS        = -lio -lsysutil -lrt -llv2 -lm
 
 VPATH       := $(SOURCES)
 
-.PHONY: all clean pkg
+.PHONY: all clean self pkg
 
 all: $(TARGET).elf
 
@@ -32,27 +32,17 @@ $(TARGET).elf: $(OFILES)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+self: $(TARGET).self
+
 $(TARGET).self: $(TARGET).elf
 	ppu-strip $(TARGET).elf
 	sprxlinker $(TARGET).elf
 	make_self $(TARGET).elf $(TARGET).self
 
-pkg: $(TARGET).pkg
-
-$(TARGET).pkg: $(TARGET).self
-	@echo "Gerando PKG..."
-	rm -rf pkg
-	mkdir -p pkg/USRDIR
-	cp $(TARGET).self pkg/USRDIR/EBOOT.BIN
-	@if [ -f $(PS3DEV)/bin/pkg.py ]; then \
-		python3 $(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
-	elif command -v pkg >/dev/null 2>&1; then \
-		pkg --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
-	else \
-		echo "AVISO: ferramenta de PKG nao encontrada" ; \
-		exit 1 ; \
-	fi
-	@ls -la $(TARGET).pkg
+# pkg e gerado principalmente no GitHub Actions (precisa Python 2 + pkg.py)
+pkg: self
+	@echo "Use o workflow do GitHub Actions para gerar o .pkg"
+	@echo "Ou localmente: python2 \$$PS3DEV/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg"
 
 clean:
 	rm -f $(OFILES) $(TARGET).elf $(TARGET).self $(TARGET).pkg
