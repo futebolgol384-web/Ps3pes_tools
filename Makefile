@@ -22,8 +22,6 @@ LIBS        = -lio -lsysutil -lrt -llv2 -lm
 
 VPATH       := $(SOURCES)
 
-PYTHON2     := $(shell command -v python2 2>/dev/null || command -v python2.7 2>/dev/null || echo python2)
-
 .PHONY: all clean pkg
 
 all: $(TARGET).elf
@@ -47,7 +45,7 @@ $(TARGET).pkg: $(TARGET).self
 	mkdir -p pkg/USRDIR
 	cp $(TARGET).self pkg/USRDIR/EBOOT.BIN
 	@if [ -f $(PS3DEV)/bin/pkg.py ]; then \
-		$(PYTHON2) $(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
+		python3 $(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
 	elif command -v pkg >/dev/null 2>&1; then \
 		pkg --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
 	else \
