@@ -1,49 +1,82 @@
-# PS3 FPS Tools - Makefile (PSL1GHT)
+#---------------------------------------------------------------------------------
+# Clear the implicit built in rules
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
+ifeq ($(strip $(PSL1GHT)),)
+$(error "Please set PSL1GHT in your environment. export PSL1GHT=<path>")
+endif
 
-TARGET      := ps3tools
-TITLE       := PS3 FPS Tools
-APPID       := PSTL00001
-CONTENTID   := UP0001-$(APPID)_00-0000000000000000
+#---------------------------------------------------------------------------------
+# Package metadata (must be before ppu_rules)
+#---------------------------------------------------------------------------------
+TITLE		:=	PS3 FPS Tools
+APPID		:=	PSTL00001
+CONTENTID	:=	UP0001-$(APPID)_00-0000000000000000
 
-SOURCES     := source
-INCLUDES    := include
-
-CFILES      := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-OFILES      := $(CFILES:.c=.o)
-
+#---------------------------------------------------------------------------------
 include $(PSL1GHT)/ppu_rules
 
-CFLAGS      = -O2 -Wall -mcpu=cell -std=gnu99 $(MACHDEP) \
-              -I$(PSL1GHT)/ppu/include -I$(PS3DEV)/portlibs/ppu/include \
-              $(foreach dir,$(INCLUDES),-I$(dir))
+#---------------------------------------------------------------------------------
+TARGET		:=	ps3tools
+BUILD		:=	build
+SOURCES		:=	source
+INCLUDES	:=	include
 
-LDFLAGS     = $(MACHDEP) -L$(PSL1GHT)/ppu/lib -L$(PS3DEV)/portlibs/ppu/lib
-LIBS        = -lio -lsysutil -lrt -llv2 -lm
+BUILDDIR	:=	$(CURDIR)/$(BUILD)
 
-VPATH       := $(SOURCES)
+#---------------------------------------------------------------------------------
+CFLAGS		=	-O2 -Wall -mcpu=cell $(MACHDEP) $(INCLUDE)
+LDFLAGS		=	$(MACHDEP)
+LIBS		:=	-lio -lsysutil -lrt -llv2 -lm
 
-.PHONY: all clean self pkg
+#---------------------------------------------------------------------------------
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#---------------------------------------------------------------------------------
 
-all: $(TARGET).elf
+export OUTPUT	:=	$(CURDIR)/$(TARGET)
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export BUILDDIR	:=	$(CURDIR)/$(BUILD)
 
-$(TARGET).elf: $(OFILES)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+export OFILES	:=	$(CFILES:.c=.o)
+export LD	:=	$(CC)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+			$(LIBPSL1GHT_INC) \
+			-I$(CURDIR)/$(BUILD)
 
-self: $(TARGET).self
+export LIBPATHS	:=	$(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
 
-$(TARGET).self: $(TARGET).elf
-	ppu-strip $(TARGET).elf
-	sprxlinker $(TARGET).elf
-	make_self $(TARGET).elf $(TARGET).self
+.PHONY: $(BUILD) clean pkg
 
-# pkg e gerado principalmente no GitHub Actions (precisa Python 2 + pkg.py)
-pkg: self
-	@echo "Use o workflow do GitHub Actions para gerar o .pkg"
-	@echo "Ou localmente: python2 \$$PS3DEV/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg"
+#---------------------------------------------------------------------------------
+$(BUILD):
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
+pkg: $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $(OUTPUT).pkg
 
 clean:
-	rm -f $(OFILES) $(TARGET).elf $(TARGET).self $(TARGET).pkg
-	rm -rf pkg
+	@echo clean ...
+	@rm -rf $(BUILD) $(TARGET).elf $(TARGET).self $(TARGET).pkg $(TARGET).gnpdrm.pkg
+
+#---------------------------------------------------------------------------------
+else
+#---------------------------------------------------------------------------------
+
+DEPENDS	:=	$(OFILES:.o=.d)
+
+$(OUTPUT).pkg: $(OUTPUT).self
+$(OUTPUT).self: $(OUTPUT).elf
+$(OUTPUT).elf: $(OFILES)
+	@echo linking ... $(notdir $@)
+	@$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+
+-include $(DEPENDS)
+
+#---------------------------------------------------------------------------------
+endif
+#---------------------------------------------------------------------------------
