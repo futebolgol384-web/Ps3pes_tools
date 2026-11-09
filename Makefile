@@ -22,6 +22,8 @@ LIBS        = -lio -lsysutil -lrt -llv2 -lm
 
 VPATH       := $(SOURCES)
 
+PYTHON2     := $(shell command -v python2 2>/dev/null || command -v python2.7 2>/dev/null || echo python2)
+
 .PHONY: all clean pkg
 
 all: $(TARGET).elf
@@ -32,7 +34,6 @@ $(TARGET).elf: $(OFILES)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Gera o SELF a partir do ELF
 $(TARGET).self: $(TARGET).elf
 	ppu-strip $(TARGET).elf
 	sprxlinker $(TARGET).elf
@@ -40,22 +41,21 @@ $(TARGET).self: $(TARGET).elf
 
 pkg: $(TARGET).pkg
 
-# Empacota como PKG instalavel no XMB
 $(TARGET).pkg: $(TARGET).self
 	@echo "Gerando PKG..."
 	rm -rf pkg
 	mkdir -p pkg/USRDIR
 	cp $(TARGET).self pkg/USRDIR/EBOOT.BIN
 	@if [ -f $(PS3DEV)/bin/pkg.py ]; then \
-		python $(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
+		$(PYTHON2) $(PS3DEV)/bin/pkg.py --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
 	elif command -v pkg >/dev/null 2>&1; then \
 		pkg --contentid $(CONTENTID) pkg/ $(TARGET).pkg ; \
 	else \
-		echo "AVISO: ferramenta de PKG nao encontrada, gerando apenas SELF" ; \
-		cp $(TARGET).self $(TARGET).self.bin ; \
+		echo "AVISO: ferramenta de PKG nao encontrada" ; \
+		exit 1 ; \
 	fi
-	@ls -la $(TARGET).* || true
+	@ls -la $(TARGET).pkg
 
 clean:
-	rm -f $(OFILES) $(TARGET).elf $(TARGET).self $(TARGET).pkg $(TARGET).self.bin
+	rm -f $(OFILES) $(TARGET).elf $(TARGET).self $(TARGET).pkg
 	rm -rf pkg
