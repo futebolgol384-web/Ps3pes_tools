@@ -2,6 +2,7 @@ name: Build PS3 PKG
 
 on:
   push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,18 +11,38 @@ jobs:
     env:
       PS3DEV: ${{ github.workspace }}/ps3dev
       PSL1GHT: ${{ github.workspace }}/ps3dev
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Baixar o kit de PS3 pronto
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Baixar toolchain PS3 (prebuilt)
         run: |
-          curl -sL https://github.com/bucanero/ps3toolchain/releases/download/ubuntu-latest-fad3b5fb/ps3dev-ubuntu-latest-2020-08-31.tar.gz | tar xvz -C ./
+          set -e
+          echo "Baixando toolchain..."
+          curl -sL -o ps3dev.tar.gz \
+            "https://github.com/bucanero/ps3toolchain/releases/download/ubuntu-latest-fad3b5fb/ps3dev-ubuntu-latest-2020-08-31.tar.gz"
+          tar xzf ps3dev.tar.gz
           echo "${{ github.workspace }}/ps3dev/bin" >> $GITHUB_PATH
           echo "${{ github.workspace }}/ps3dev/ppu/bin" >> $GITHUB_PATH
           echo "${{ github.workspace }}/ps3dev/spu/bin" >> $GITHUB_PATH
+          ls -la ps3dev/bin | head
+
       - name: Compilar e gerar PKG
-        run: make pkg
-      - name: Guardar o PKG
+        run: |
+          set -e
+          export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH"
+          echo "PS3DEV=$PS3DEV"
+          echo "PSL1GHT=$PSL1GHT"
+          which ppu-gcc || true
+          make clean || true
+          make pkg
+          ls -la *.pkg || ls -la
+
+      - name: Upload PKG
         uses: actions/upload-artifact@v4
         with:
           name: ps3-pkg
-          path: '*.pkg'
+          path: |
+            *.pkg
+          if-no-files-found: warn
