@@ -1,0 +1,27 @@
+name: Build PS3 PKG
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      PS3DEV: ${{ github.workspace }}/ps3dev
+      PSL1GHT: ${{ github.workspace }}/ps3dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar o kit de PS3 pronto
+        run: |
+          curl -sL https://github.com/bucanero/ps3toolchain/releases/download/ubuntu-latest-fad3b5fb/ps3dev-ubuntu-latest-2020-08-31.tar.gz | tar xvz -C ./
+          echo "${{ github.workspace }}/ps3dev/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/ps3dev/ppu/bin" >> $GITHUB_PATH
+          echo "${{ github.workspace }}/ps3dev/spu/bin" >> $GITHUB_PATH
+      - name: Compilar e gerar PKG
+        run: make pkg
+      - name: Guardar o PKG
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3-pkg
+          path: '*.pkg'
