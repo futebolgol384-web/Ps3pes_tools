@@ -16,6 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Instalar Python 2 (pkg.py antigo)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python2 || sudo apt-get install -y python2.7 || true
+          python2 --version || python2.7 --version || true
+
       - name: Baixar toolchain PS3 (prebuilt)
         run: |
           set -e
@@ -26,18 +32,18 @@ jobs:
           echo "${{ github.workspace }}/ps3dev/bin" >> $GITHUB_PATH
           echo "${{ github.workspace }}/ps3dev/ppu/bin" >> $GITHUB_PATH
           echo "${{ github.workspace }}/ps3dev/spu/bin" >> $GITHUB_PATH
-          ls -la ps3dev/bin | head
 
       - name: Compilar e gerar PKG
         run: |
           set -e
           export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH"
-          echo "PS3DEV=$PS3DEV"
-          echo "PSL1GHT=$PSL1GHT"
-          which ppu-gcc || true
+          # Forca python2 no shebang do pkg.py se existir
+          if [ -f "$PS3DEV/bin/pkg.py" ]; then
+            sed -i '1s|.*|#!/usr/bin/env python2|' "$PS3DEV/bin/pkg.py" || true
+          fi
           make clean || true
           make pkg
-          ls -la *.pkg || ls -la
+          ls -la *.pkg *.self 2>/dev/null || ls -la
 
       - name: Upload PKG
         uses: actions/upload-artifact@v4
@@ -45,4 +51,5 @@ jobs:
           name: ps3-pkg
           path: |
             *.pkg
+            *.self
           if-no-files-found: warn
