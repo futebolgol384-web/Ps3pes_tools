@@ -1,0 +1,33 @@
+name: Build PS3 PKG
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar Docker PS3DEV
+        run: |
+          git clone --depth 1 https://github.com/ps3dev/ps3dev-docker.git /tmp/ps3dev-docker
+          sed -i 's/apt-get -y install /apt-get -y install cmake /' /tmp/ps3dev-docker/Dockerfile
+          docker build -t ps3dev-docker /tmp/ps3dev-docker
+
+      - name: Compilar e gerar PKG
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/build" \
+            -w /build \
+            ps3dev-docker make pkg
+
+      - name: Guardar o PKG
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3-pkg
+          path: "*.pkg"
+          if-no-files-found: error
