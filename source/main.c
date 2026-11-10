@@ -3,7 +3,7 @@
 #include <string.h>
 #include <io/pad.h>
 #include <sysutil/sysutil.h>
-#include <sysutil/msgdialog.h>
+#include <sysutil/msg.h>
 
 static int running = 1;
 static int dialog_done = 0;
@@ -30,7 +30,7 @@ int main(void) {
     sysUtilRegisterCallback(0, sysutil_cb, NULL);
 
     /* Dialogo do sistema aparece NA TV (printf so aparece em debug) */
-    dtype = (msgType)(MSGDIALOG_NORMAL | MSGDIALOG_BUTTON_TYPE_OK | MSGDIALOG_DISABLE_CANCEL_ON);
+    dtype = (msgType)(MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
     msgDialogOpen2(
         dtype,
         "PS3 FPS Tools v0.1\n\n"
@@ -39,7 +39,7 @@ int main(void) {
         "- Artemis + .ncl\n"
         "- webMAN + PS3MAPI\n"
         "- PSUF\n\n"
-        "Aperte OK / CIRCULO para sair.",
+        "Aperte OK para sair.",
         dialog_cb,
         NULL,
         NULL
